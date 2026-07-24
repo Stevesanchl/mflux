@@ -1,5 +1,6 @@
 import mlx.core as mx
 import numpy as np
+import pytest
 from PIL import Image
 
 from mflux.models.mage_flow.model.mage_flow_vae.vae import MageVAE, _DConvDenoiser, _DConvEncoder
@@ -21,6 +22,32 @@ def test_mage_flow_edit_target_size_matches_official_minimum_floor() -> None:
     assert MageFlowEditUtil.resolve_target_size(tiny, width=8, height=8) == (16, 16)
     assert MageFlowEditUtil.resolve_target_size(tiny, width=None, height=None, max_size=8) == (16, 16)
     assert MageFlowEditUtil.resolve_target_size(extreme, width=None, height=None, max_size=512) == (512, 16)
+
+
+@pytest.mark.parametrize(
+    ("width", "height", "max_size", "field"),
+    [
+        (0, None, None, "width"),
+        (None, -1, None, "height"),
+        (None, None, 0, "max_size"),
+        (None, None, -1, "max_size"),
+    ],
+)
+def test_mage_flow_edit_target_size_rejects_non_positive_values(
+    width: int | None,
+    height: int | None,
+    max_size: int | None,
+    field: str,
+) -> None:
+    primary = Image.new("RGB", (1200, 800))
+
+    with pytest.raises(ValueError, match=rf"{field} must be positive"):
+        MageFlowEditUtil.resolve_target_size(
+            primary,
+            width=width,
+            height=height,
+            max_size=max_size,
+        )
 
 
 def test_mage_flow_edit_vl_copy_caps_long_edge_with_bicubic_aspect() -> None:

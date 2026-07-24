@@ -1,6 +1,8 @@
 from mflux.models.mage_flow.model.mage_flow_text_encoder.policy import (
     CONTENT_FILTER_EDIT_SYSTEM,
     CONTENT_FILTER_SYSTEM,
+    CORTEX_CONTENT_FILTER_EDIT_SYSTEM,
+    CORTEX_CONTENT_FILTER_SYSTEM,
     FilterVerdict,
     MageFlowContentPolicy,
     make_refusal_image,
@@ -21,6 +23,8 @@ from mflux.models.mage_flow.model.mage_flow_text_encoder.vision_model import Mag
 __all__ = [
     "CONTENT_FILTER_EDIT_SYSTEM",
     "CONTENT_FILTER_SYSTEM",
+    "CORTEX_CONTENT_FILTER_EDIT_SYSTEM",
+    "CORTEX_CONTENT_FILTER_SYSTEM",
     "FilterVerdict",
     "MageFlowContentPolicy",
     "MageFlowPromptProcessor",

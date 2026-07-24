@@ -53,3 +53,8 @@ def test_mage_flow_initializer_shares_resolved_snapshot_for_weights_and_tokenize
     assert seen["tokenizers"] == str(shared_root)
     assert seen["weights"] == seen["tokenizers"]
     assert "mage" in model.tokenizers
+
+
+def test_mage_flow_initializer_rejects_unknown_content_policy() -> None:
+    with pytest.raises(ValueError, match="content_policy must be 'microsoft' or 'cortex'"):
+        MageFlowInitializer._validate_content_policy("off")

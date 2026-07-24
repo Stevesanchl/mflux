@@ -12,7 +12,10 @@ from mflux.models.mage_flow.latent_creator import MageFlowLatentCreator
 from mflux.models.mage_flow.mage_flow_initializer import MageFlowInitializer
 from mflux.models.mage_flow.model.mage_flow_text_encoder import MageFlowTextEncoder
 from mflux.models.mage_flow.model.mage_flow_text_encoder.policy import (
+    CORTEX_CONTENT_FILTER_EDIT_SYSTEM,
+    CORTEX_CONTENT_FILTER_SYSTEM,
     FilterVerdict,
+    MageFlowContentPolicy,
     make_refusal_image,
 )
 from mflux.models.mage_flow.model.mage_flow_transformer import MageFlowTransformer
@@ -20,6 +23,7 @@ from mflux.models.mage_flow.model.mage_flow_vae import MageVAE
 from mflux.models.mage_flow.variants.conditioning import MageFlowConditioning
 from mflux.models.mage_flow.variants.edit.util import MageFlowEditUtil
 from mflux.models.mage_flow.variants.pipeline_helpers import (
+    MageFlowPromptCache,
     make_velocity_predictor,
     resolve_generation_parameters,
     resolve_seed,
@@ -45,6 +49,7 @@ class MageFlowEdit(nn.Module):
         quantize: int | None = None,
         model_path: str | None = None,
         model_config: ModelConfig | None = None,
+        content_policy: str = "microsoft",
     ):
         super().__init__()
         MageFlowInitializer.init(
@@ -52,6 +57,7 @@ class MageFlowEdit(nn.Module):
             model_config=model_config or ModelConfig.mage_flow_edit(),
             quantize=quantize,
             model_path=model_path,
+            content_policy=content_policy,
         )
 
     def generate_image(
@@ -223,8 +229,12 @@ class MageFlowEdit(nn.Module):
             max_sequence_length=self.model_config.max_sequence_length or 2048,
         )
         mx.eval(*result)
-        self.prompt_cache[cache_key] = result
-        self.prompt_cache[prompt] = result
+        MageFlowPromptCache.store(
+            self.prompt_cache,
+            cache_key=cache_key,
+            prompt=prompt,
+            result=result,
+        )
         return result
 
     def _screen_edit(
@@ -240,11 +250,21 @@ class MageFlowEdit(nn.Module):
         cache_key = ("edit", prompt, reference_key)
         verdict = cache.get(cache_key)
         if verdict is None:
-            verdict = self.text_encoder.screen_edit(
-                prompt,
-                references,
-                self.tokenizers["mage"],
-            )
+            if getattr(self, "content_policy", "microsoft") == "cortex":
+                verdict = MageFlowContentPolicy.screen_edit(
+                    text_encoder=self.text_encoder,
+                    tokenizer=self.tokenizers["mage"],
+                    prompt=prompt,
+                    ref_images=references,
+                    system_prompt=CORTEX_CONTENT_FILTER_EDIT_SYSTEM,
+                    text_system_prompt=CORTEX_CONTENT_FILTER_SYSTEM,
+                )
+            else:
+                verdict = self.text_encoder.screen_edit(
+                    prompt,
+                    references,
+                    self.tokenizers["mage"],
+                )
             cache[cache_key] = verdict
             mx.clear_cache()
         return verdict

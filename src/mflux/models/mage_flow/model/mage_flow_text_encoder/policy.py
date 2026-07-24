@@ -154,6 +154,32 @@ Respond with STRICT JSON ONLY (no markdown, no preamble, no commentary):
 [source: an ordinary unknown man in a suit on a street] + instruction "change the background to a beach"
 → {"violates": false, "categories": [], "reason": "Not a recognizable public figure; ordinary person, innocuous edit — allowed."}"""
 
+CORTEX_CONTENT_FILTER_SYSTEM = """You classify only the two hard boundaries retained by CORTEX for local image generation.
+
+Block only:
+1. Sexual content involving anyone under 18 or whose age is unclear or ambiguous.
+2. Non-consensual sexual content, sexual exploitation, coercion, or incapacitated consent.
+
+Allow consensual adult nudity and sexuality. Allow public figures, copyrighted characters, logos, fictional subjects, violence, documentary/history, politics, and other lawful creative content unless one of the two hard boundaries above is present. Do not invent additional categories.
+
+Respond with strict JSON only:
+{"violates": true_or_false, "categories": ["sexual"], "reason": "<one short sentence>"}
+
+Use categories=[] when allowed. A violation must use categories=["sexual"]."""
+
+CORTEX_CONTENT_FILTER_EDIT_SYSTEM = """You classify only the two hard boundaries retained by CORTEX for local image editing. Judge the source images and the requested edit together.
+
+Block only:
+1. Sexual content involving anyone under 18 or whose age is unclear or ambiguous.
+2. Non-consensual sexual content, sexual exploitation, coercion, or incapacitated consent.
+
+Allow ordinary non-sexual images of minors. Allow consensual adult nudity and sexuality. Allow edits involving public figures, copyrighted characters, logos, fictional subjects, violence, documentary/history, politics, and other lawful creative content unless one of the two hard boundaries above is present. Do not invent additional categories.
+
+Respond with strict JSON only:
+{"violates": true_or_false, "categories": ["sexual"], "reason": "<one short sentence>"}
+
+Use categories=[] when allowed. A violation must use categories=["sexual"]."""
+
 
 CATEGORY_DISPLAY = {
     "sexual": "Sexual content",
@@ -188,6 +214,7 @@ class MageFlowContentPolicy:
         tokenizer: Any,
         prompt: str,
         max_new_tokens: int = 160,
+        system_prompt: str = CONTENT_FILTER_SYSTEM,
     ) -> FilterVerdict:
         if not prompt or not prompt.strip():
             return FilterVerdict(False, [], "empty prompt", "")
@@ -195,7 +222,7 @@ class MageFlowContentPolicy:
         try:
             raw_tokenizer = cls._raw_tokenizer(tokenizer)
             messages = [
-                {"role": "system", "content": CONTENT_FILTER_SYSTEM},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Prompt to classify:\n{prompt}"},
             ]
             text = raw_tokenizer.apply_chat_template(
@@ -239,6 +266,8 @@ class MageFlowContentPolicy:
         prompt: str,
         ref_images: Any,
         max_new_tokens: int = 192,
+        system_prompt: str = CONTENT_FILTER_EDIT_SYSTEM,
+        text_system_prompt: str = CONTENT_FILTER_SYSTEM,
     ) -> FilterVerdict:
         images = [ref_images] if isinstance(ref_images, Image.Image) else list(ref_images)
         images = [image.convert("RGB") for image in images if image is not None]
@@ -248,6 +277,7 @@ class MageFlowContentPolicy:
                 tokenizer=tokenizer,
                 prompt=prompt,
                 max_new_tokens=max_new_tokens,
+                system_prompt=text_system_prompt,
             )
 
         instruction = (prompt or "").strip() or "(no textual instruction)"
@@ -265,7 +295,7 @@ class MageFlowContentPolicy:
                 }
             )
             messages = [
-                {"role": "system", "content": CONTENT_FILTER_EDIT_SYSTEM},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
             ]
             text = raw_tokenizer.apply_chat_template(

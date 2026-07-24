@@ -27,10 +27,14 @@ class MageFlowEditUtil:
         height: int | None,
         max_size: int | None = None,
     ) -> tuple[int, int]:
+        for name, value in (("width", width), ("height", height), ("max_size", max_size)):
+            if value is not None and value <= 0:
+                raise ValueError(f"{name} must be positive")
+
         source_width, source_height = primary_image.size
         if width is not None and height is not None:
             target_width, target_height = width, height
-        elif max_size:
+        elif max_size is not None:
             scale = max_size / max(source_width, source_height)
             target_width = round(source_width * scale)
             target_height = round(source_height * scale)

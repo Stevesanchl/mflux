@@ -139,8 +139,16 @@ mflux-save \
 Load it by passing that directory to `--model`. LoRA adapters are not currently
 supported for Mage Flow.
 
-As in Microsoft's release, every positive generation prompt is screened by the
-same Qwen3-VL weights before denoising. Edit requests screen both the instruction
-and the original-resolution source images. The classifier is fail-closed and a
-blocked request returns a plain white image; its autoregressive pass can be a
-noticeable part of Turbo-model latency.
+As in Microsoft's release, the default `--content-policy microsoft` profile
+screens every positive generation prompt with the same Qwen3-VL weights before
+denoising. Edit requests screen both the instruction and the original-resolution
+source images. The classifier is fail-closed and a blocked request returns a
+plain white image; its autoregressive pass can be a noticeable part of
+Turbo-model latency.
+
+The Stevesanchl fork also exposes `--content-policy cortex` for CORTEX's local
+route. It allows consensual adult content, public figures, copyrighted
+characters, documentary/history, politics, violence, and other lawful creative
+work while retaining only CORTEX's hard blocks for sexual content involving
+minors or age-ambiguous people and non-consensual sexual content. The upstream
+Microsoft profile remains the default for all other callers.

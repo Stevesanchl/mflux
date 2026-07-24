@@ -157,6 +157,12 @@ class CommandLineParser(argparse.ArgumentParser):
         # been resolved to its base configuration.
         self.defer_step_default = True
         self.set_defaults(scheduler="mage_flow")
+        self.add_argument(
+            "--content-policy",
+            choices=("microsoft", "cortex"),
+            default="microsoft",
+            help="Prompt policy profile. 'cortex' retains only the minor/age-ambiguity and non-consent hard boundaries.",
+        )
         self.add_argument("--renormalization", action="store_true", help="Rescale guided velocity per token to reduce over-saturation at high guidance.")
         self.add_argument("--gaussian-shading-key", type=str, default=None, help="Key for Mage Flow's Gaussian-Shading watermark. Defaults to MAGEFLOW_GS_KEY, MAGEFLOW_GS_KEY_FILE, or the released model key.")
 

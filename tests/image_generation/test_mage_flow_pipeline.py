@@ -14,6 +14,8 @@ from mflux.models.common.weights.loading.loaded_weights import LoadedWeights, Me
 from mflux.models.mage_flow.mage_flow_initializer import MageFlowInitializer
 from mflux.models.mage_flow.variants.edit.mage_flow_edit import MageFlowEdit
 from mflux.models.mage_flow.variants.pipeline_helpers import (
+    MAGE_FLOW_PROMPT_CACHE_MAX_ENTRIES,
+    MageFlowPromptCache,
     default_guidance,
     default_inference_steps,
     make_velocity_predictor,
@@ -168,6 +170,25 @@ def test_mage_flow_defaults_match_all_six_released_checkpoints():
     for config, steps, guidance in cases:
         assert default_inference_steps(config) == steps
         assert default_guidance(config) == guidance
+
+
+def test_mage_flow_prompt_cache_is_bounded_and_keeps_latest_alias() -> None:
+    cache = {}
+    result = None
+    for index in range(MAGE_FLOW_PROMPT_CACHE_MAX_ENTRIES):
+        result = object()
+        prompt = f"prompt-{index}"
+        MageFlowPromptCache.store(
+            cache,
+            cache_key=(prompt, " ", 1.0),
+            prompt=prompt,
+            result=result,
+        )
+
+    assert len(cache) == MAGE_FLOW_PROMPT_CACHE_MAX_ENTRIES
+    assert cache["prompt-15"] is result
+    assert ("prompt-0", " ", 1.0) not in cache
+    assert "prompt-0" not in cache
 
 
 def test_mage_flow_turbo_python_api_rejects_cfg():

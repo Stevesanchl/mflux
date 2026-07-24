@@ -8,6 +8,7 @@ from mflux.models.mage_flow.model.mage_flow_transformer import MageFlowTransform
 from mflux.utils.apple_silicon import AppleSiliconUtil
 
 ImageShape = tuple[int, int, int]
+MAGE_FLOW_PROMPT_CACHE_MAX_ENTRIES = 16
 
 _DEFAULT_STEPS = {
     "microsoft/Mage-Flow-Base": 30,
@@ -17,6 +18,23 @@ _DEFAULT_STEPS = {
     "microsoft/Mage-Flow-Edit": 30,
     "microsoft/Mage-Flow-Edit-Turbo": 4,
 }
+
+
+class MageFlowPromptCache:
+    @staticmethod
+    def store(
+        prompt_cache: dict,
+        *,
+        cache_key,
+        prompt: str,
+        result,
+        max_entries: int = MAGE_FLOW_PROMPT_CACHE_MAX_ENTRIES,
+    ) -> None:
+        for key in (cache_key, prompt):
+            prompt_cache.pop(key, None)
+            prompt_cache[key] = result
+        while len(prompt_cache) > max_entries:
+            prompt_cache.pop(next(iter(prompt_cache)))
 
 
 def default_inference_steps(model_config: ModelConfig) -> int:

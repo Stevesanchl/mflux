@@ -28,6 +28,7 @@ def main() -> None:
         model_config=model_config,
         quantize=args.quantize,
         model_path=args.model_path,
+        content_policy=args.content_policy,
     )
     memory_saver = CallbackManager.register_callbacks(
         args=args,

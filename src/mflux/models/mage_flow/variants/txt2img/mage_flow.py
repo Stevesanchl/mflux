@@ -8,13 +8,16 @@ from mflux.models.mage_flow.latent_creator import MageFlowLatentCreator
 from mflux.models.mage_flow.mage_flow_initializer import MageFlowInitializer
 from mflux.models.mage_flow.model.mage_flow_text_encoder import MageFlowTextEncoder
 from mflux.models.mage_flow.model.mage_flow_text_encoder.policy import (
+    CORTEX_CONTENT_FILTER_SYSTEM,
     FilterVerdict,
+    MageFlowContentPolicy,
     make_refusal_image,
 )
 from mflux.models.mage_flow.model.mage_flow_transformer import MageFlowTransformer
 from mflux.models.mage_flow.model.mage_flow_vae import MageVAE
 from mflux.models.mage_flow.variants.conditioning import MageFlowConditioning
 from mflux.models.mage_flow.variants.pipeline_helpers import (
+    MageFlowPromptCache,
     make_velocity_predictor,
     normalize_image_dimension,
     resolve_generation_parameters,
@@ -38,6 +41,7 @@ class MageFlow(nn.Module):
         quantize: int | None = None,
         model_path: str | None = None,
         model_config: ModelConfig | None = None,
+        content_policy: str = "microsoft",
     ):
         super().__init__()
         MageFlowInitializer.init(
@@ -45,6 +49,7 @@ class MageFlow(nn.Module):
             model_config=model_config or ModelConfig.mage_flow(),
             quantize=quantize,
             model_path=model_path,
+            content_policy=content_policy,
         )
 
     def generate_image(
@@ -175,10 +180,14 @@ class MageFlow(nn.Module):
             max_sequence_length=self.model_config.max_sequence_length or 2048,
         )
         mx.eval(*result)
-        self.prompt_cache[cache_key] = result
         # MemorySaver uses the positive prompt as its generic "safe to evict"
         # signal. The exact tuple remains the lookup key for correctness.
-        self.prompt_cache[prompt] = result
+        MageFlowPromptCache.store(
+            self.prompt_cache,
+            cache_key=cache_key,
+            prompt=prompt,
+            result=result,
+        )
         return result
 
     def _screen_prompt(self, prompt: str) -> FilterVerdict:
@@ -188,7 +197,15 @@ class MageFlow(nn.Module):
         cache_key = ("text", prompt)
         verdict = cache.get(cache_key)
         if verdict is None:
-            verdict = self.text_encoder.screen_text(prompt, self.tokenizers["mage"])
+            if getattr(self, "content_policy", "microsoft") == "cortex":
+                verdict = MageFlowContentPolicy.screen_text(
+                    text_encoder=self.text_encoder,
+                    tokenizer=self.tokenizers["mage"],
+                    prompt=prompt,
+                    system_prompt=CORTEX_CONTENT_FILTER_SYSTEM,
+                )
+            else:
+                verdict = self.text_encoder.screen_text(prompt, self.tokenizers["mage"])
             cache[cache_key] = verdict
             # The autoregressive KV cache is no longer live; release its Metal
             # buffers before the diffusion conditioning pass.

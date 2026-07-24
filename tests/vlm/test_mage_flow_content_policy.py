@@ -6,6 +6,8 @@ from PIL import Image
 from mflux.models.mage_flow.model.mage_flow_text_encoder import (
     CONTENT_FILTER_EDIT_SYSTEM,
     CONTENT_FILTER_SYSTEM,
+    CORTEX_CONTENT_FILTER_EDIT_SYSTEM,
+    CORTEX_CONTENT_FILTER_SYSTEM,
     MageFlowContentPolicy,
     make_refusal_image,
 )
@@ -170,6 +172,42 @@ def test_mage_flow_edit_policy_uses_original_resolution_and_exact_multimodal_pro
     )
     assert int(mx.sum(generate_call["input_ids"] == 3).item()) == 128
     assert generate_call["max_new_tokens"] == 192
+
+
+def test_cortex_text_policy_uses_only_the_retained_hard_boundaries() -> None:
+    tokenizer = _PolicyTokenizer('{"violates": false, "categories": [], "reason": "allowed"}')
+
+    verdict = MageFlowContentPolicy.screen_text(
+        text_encoder=_PolicyTextEncoder(),
+        tokenizer=_TokenizerWrapper(tokenizer),
+        prompt="a public figure in a fictional action scene",
+        system_prompt=CORTEX_CONTENT_FILTER_SYSTEM,
+    )
+
+    assert verdict.violates is False
+    assert tokenizer.messages[0][0]["content"] == CORTEX_CONTENT_FILTER_SYSTEM
+    assert "Allow consensual adult nudity and sexuality" in CORTEX_CONTENT_FILTER_SYSTEM
+    assert "public figures" in CORTEX_CONTENT_FILTER_SYSTEM
+    assert "anyone under 18" in CORTEX_CONTENT_FILTER_SYSTEM
+    assert "Non-consensual sexual content" in CORTEX_CONTENT_FILTER_SYSTEM
+
+
+def test_cortex_edit_policy_uses_narrow_multimodal_boundary() -> None:
+    tokenizer = _PolicyTokenizer('{"violates": true, "categories": ["sexual"], "reason": "hard boundary"}')
+
+    verdict = MageFlowContentPolicy.screen_edit(
+        text_encoder=_PolicyTextEncoder(),
+        tokenizer=_TokenizerWrapper(tokenizer),
+        prompt="edit request",
+        ref_images=[Image.new("RGB", (32, 32))],
+        system_prompt=CORTEX_CONTENT_FILTER_EDIT_SYSTEM,
+        text_system_prompt=CORTEX_CONTENT_FILTER_SYSTEM,
+    )
+
+    assert verdict.violates is True
+    assert verdict.categories == ["sexual"]
+    assert tokenizer.messages[0][0]["content"] == CORTEX_CONTENT_FILTER_EDIT_SYSTEM
+    assert "Allow ordinary non-sexual images of minors" in CORTEX_CONTENT_FILTER_EDIT_SYSTEM
 
 
 def test_mage_flow_policy_is_fail_closed_for_malformed_or_failed_generation() -> None:

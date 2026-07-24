@@ -86,10 +86,29 @@ def test_mage_flow_text_to_image_defaults() -> None:
     assert args.steps == 20
     assert args.guidance == pytest.approx(5.0)
     assert args.scheduler == "mage_flow"
+    assert args.content_policy == "microsoft"
     assert args.renormalization is False
     assert args.gaussian_shading_key is None
     assert args.width == 1024
     assert args.height == 1024
+
+
+@pytest.mark.fast
+def test_mage_flow_cortex_policy_is_explicitly_selectable() -> None:
+    parser = _text_to_image_parser()
+    with patch(
+        "sys.argv",
+        [
+            "mflux-generate-mage-flow",
+            "--prompt",
+            "a silver fox",
+            "--content-policy",
+            "cortex",
+        ],
+    ):
+        args = parser.parse_args()
+
+    assert args.content_policy == "cortex"
 
 
 @pytest.mark.fast

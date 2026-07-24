@@ -25,10 +25,12 @@ class MageFlowInitializer:
         model_config: ModelConfig,
         quantize: int | None,
         model_path: str | None = None,
+        content_policy: str = "microsoft",
     ) -> None:
+        MageFlowInitializer._validate_content_policy(content_policy)
         path = model_path or model_config.model_name
         root_path = MageFlowInitializer._resolve_model_path(path)
-        MageFlowInitializer._init_config(model, model_config)
+        MageFlowInitializer._init_config(model, model_config, content_policy)
         weights = MageFlowInitializer._load_weights(root_path)
         MageFlowWeightDefinition.validate_loaded_weights(weights)
         MageFlowInitializer._init_tokenizers(model, root_path)
@@ -53,14 +55,20 @@ class MageFlowInitializer:
         return root_path
 
     @staticmethod
-    def _init_config(model, model_config: ModelConfig) -> None:
+    def _init_config(model, model_config: ModelConfig, content_policy: str) -> None:
         model.prompt_cache = {}
         model.policy_cache = {}
+        model.content_policy = content_policy
         model.model_config = model_config
         model.callbacks = CallbackRegistry()
         model.tiling_config = None
         model.lora_paths = None
         model.lora_scales = None
+
+    @staticmethod
+    def _validate_content_policy(content_policy: str) -> None:
+        if content_policy not in {"microsoft", "cortex"}:
+            raise ValueError("content_policy must be 'microsoft' or 'cortex'")
 
     @staticmethod
     def _load_weights(model_path: Path) -> LoadedWeights:
