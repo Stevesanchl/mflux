@@ -103,22 +103,23 @@ class MageFlowEdit(nn.Module):
             scheduler=scheduler,
         )
         reference_key = self._reference_cache_key(references)
-        verdict = self._screen_edit(
-            prompt=prompt,
-            references=references,
-            reference_key=reference_key,
-        )
-        if verdict.violates:
-            print(verdict.banner())
-            return self._refusal_result(
-                verdict=verdict,
-                config=config,
-                seed=seed,
+        if getattr(self, "content_policy", "microsoft") != "none":
+            verdict = self._screen_edit(
                 prompt=prompt,
-                negative_prompt=negative_prompt,
-                primary_path=primary_path,
-                metadata_paths=metadata_paths,
+                references=references,
+                reference_key=reference_key,
             )
+            if verdict.violates:
+                print(verdict.banner())
+                return self._refusal_result(
+                    verdict=verdict,
+                    config=config,
+                    seed=seed,
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    primary_path=primary_path,
+                    metadata_paths=metadata_paths,
+                )
 
         target_latents = MageFlowLatentCreator.create_noise(
             seed=seed,

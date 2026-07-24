@@ -152,3 +152,7 @@ characters, documentary/history, politics, violence, and other lawful creative
 work while retaining only CORTEX's hard blocks for sexual content involving
 minors or age-ambiguous people and non-consensual sexual content. The upstream
 Microsoft profile remains the default for all other callers.
+
+Use `--content-policy none` to bypass the prompt/source-image classifier
+entirely. This removes the classifier pass and its white refusal result; it does
+not change the selected checkpoint or generation pipeline.

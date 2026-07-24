@@ -79,16 +79,17 @@ class MageFlow(nn.Module):
             guidance=guidance,
             scheduler=scheduler,
         )
-        verdict = self._screen_prompt(prompt)
-        if verdict.violates:
-            print(verdict.banner())
-            return self._refusal_result(
-                verdict=verdict,
-                config=config,
-                seed=seed,
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-            )
+        if getattr(self, "content_policy", "microsoft") != "none":
+            verdict = self._screen_prompt(prompt)
+            if verdict.violates:
+                print(verdict.banner())
+                return self._refusal_result(
+                    verdict=verdict,
+                    config=config,
+                    seed=seed,
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                )
 
         latents = MageFlowLatentCreator.create_noise(
             seed=seed,

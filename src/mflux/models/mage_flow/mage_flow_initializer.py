@@ -67,8 +67,8 @@ class MageFlowInitializer:
 
     @staticmethod
     def _validate_content_policy(content_policy: str) -> None:
-        if content_policy not in {"microsoft", "cortex"}:
-            raise ValueError("content_policy must be 'microsoft' or 'cortex'")
+        if content_policy not in {"microsoft", "cortex", "none"}:
+            raise ValueError("content_policy must be 'microsoft', 'cortex', or 'none'")
 
     @staticmethod
     def _load_weights(model_path: Path) -> LoadedWeights:

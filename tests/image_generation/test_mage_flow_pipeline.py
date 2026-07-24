@@ -391,6 +391,29 @@ def test_mage_flow_content_policy_returns_white_refusal_before_denoising():
     assert generated.generation_time == 0.0
 
 
+def test_mage_flow_none_policy_bypasses_classifier(monkeypatch):
+    tokenizer = SimpleNamespace(tokenizer=_RawTokenizer())
+    model = _bare_pipeline(MageFlow, ModelConfig.mage_flow_turbo(), tokenizer)
+    model.content_policy = "none"
+    monkeypatch.setattr(
+        model,
+        "_screen_prompt",
+        lambda _prompt: pytest.fail("content classifier must not run when policy is none"),
+    )
+
+    generated = model.generate_image(
+        seed=7,
+        prompt="unclassified prompt",
+        num_inference_steps=1,
+        height=16,
+        width=16,
+        guidance=1.0,
+    )
+
+    assert generated.image.size == (16, 16)
+    assert generated.generation_time > 0.0
+
+
 def test_mage_flow_edit_pipeline_keeps_reference_clean_and_steps_target_only(monkeypatch):
     import mflux.models.mage_flow.variants.edit.mage_flow_edit as pipeline_module
 

@@ -56,5 +56,6 @@ def test_mage_flow_initializer_shares_resolved_snapshot_for_weights_and_tokenize
 
 
 def test_mage_flow_initializer_rejects_unknown_content_policy() -> None:
-    with pytest.raises(ValueError, match="content_policy must be 'microsoft' or 'cortex'"):
+    MageFlowInitializer._validate_content_policy("none")
+    with pytest.raises(ValueError, match="content_policy must be 'microsoft', 'cortex', or 'none'"):
         MageFlowInitializer._validate_content_policy("off")

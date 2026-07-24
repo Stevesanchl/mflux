@@ -112,6 +112,24 @@ def test_mage_flow_cortex_policy_is_explicitly_selectable() -> None:
 
 
 @pytest.mark.fast
+def test_mage_flow_policy_classification_can_be_disabled() -> None:
+    parser = _text_to_image_parser()
+    with patch(
+        "sys.argv",
+        [
+            "mflux-generate-mage-flow",
+            "--prompt",
+            "a silver fox",
+            "--content-policy",
+            "none",
+        ],
+    ):
+        args = parser.parse_args()
+
+    assert args.content_policy == "none"
+
+
+@pytest.mark.fast
 def test_mage_flow_turbo_defaults_and_flags() -> None:
     parser = _text_to_image_parser()
     with patch(
